@@ -49,7 +49,7 @@ function PolAbs(model::PhenomD,
         fInsJoin_Ampl = fInsJoin_Ampl,
         GMsun_over_c3 = GMsun_over_c3,
         GMsun_over_c2_Gpc = GMsun_over_c2_Gpc,
-        container = container
+        # container = container # this raises an error, because the container is not used in the Ampl function
     )
 
     # take into account inclination 

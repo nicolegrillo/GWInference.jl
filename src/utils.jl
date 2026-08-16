@@ -42,6 +42,20 @@ H0 = 67.66u"km/s/Mpc" # km/s 1/Mpc
 
 
 ##############################################################################
+"""Compute polarization amplitudes from the plus and cross polarizations."""
+
+const polarization_dict = Dict(
+    "plus" => [
+        1.0  0.0  0.0
+        0.0 -1.0  0.0
+        0.0  0.0  0.0
+    ],
+    "cross" => [
+        0.0 1.0 0.0
+        1.0 0.0 0.0
+        0.0 0.0 0.0
+    ]
+)
 
 """
 Compute the masses of the two objects, in the source frame, from the chirp mass, in the detector frame, the symmetric mass ratio and the redshift.

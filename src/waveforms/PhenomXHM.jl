@@ -12,9 +12,6 @@ function _fcutInsp(model::PhenomXHM, eta, chi1, emm, fMECOlm)
     Seta = ifelse(eta<.25,sqrt(1.0 - 4.0 * eta),0.)
     q = 0.5*(1.0 + Seta - 2.0*eta)/eta
     #Return the end frequency of the inspiral region and the beginning of the intermediate for the amplitude of one mode.
-
-
-
     
     if q < 20.
         fcut = fMECOlm;
@@ -181,7 +178,9 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
                 debug=false, fcutPar = 0.3, GMsun_over_c3 = uc.GMsun_over_c3, GMsun_over_c2_Gpc = uc.GMsun_over_c2_Gpc,
                 container= nothing,
                 call_number = 2,
-                optimization = false
+                optimization = false, 
+                PNorder=nothing,
+                o1=0.0
             )
 
 
@@ -322,7 +321,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
     ### 22 mode
 
     
-    Phase22 = Phase_22_ConnectionCoefficients(mc, eta, chi1, chi2)
+    Phase22 = Phase_22_ConnectionCoefficients(mc, eta, chi1, chi2; PNorder=PNorder, o1=o1)
     Amp22 = Ampl_22_ConnectionCoefficients(mc, eta, chi1, chi2, dL)
 
     psi4tostrain = ((13.39320482758057 - 175.42481512989315*eta + 2097.425116152503*eta2 - 9862.84178637907*eta2*eta + 16026.897939722587*eta2*eta2) + ((4.7895602776763 - 163.04871764530466*eta + 609.5575850476959*eta2)*totchi + (1.3934428041390161 - 97.51812681228478*eta + 376.9200932531847*eta2)*totchi2 + (15.649521097877374 + 137.33317057388916*eta - 755.9566456906406*eta2)*totchi2*totchi + (13.097315867845788 + 149.30405703643288*eta - 764.5242164872267*eta2)*totchi2*totchi2) + (105.37711654943146*dchi*Seta*eta2))
@@ -330,11 +329,11 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
 
     lina = 0.0
 
-    timeshift= TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22)
-    phifRef = -(etaInv*_completePhase(model, MfRef, Phase22, fdamp_22, fring_22) + timeshift*MfRef + lina) + pi/4. + pi
+    timeshift= TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=o1)
+    phifRef = -(etaInv*_completePhase(model, MfRef, Phase22, fdamp_22, fring_22; deltaVminus2=o1) + timeshift*MfRef + lina) + pi/4. + pi
     
     
-    phase_22    =  etaInv .*_completePhase(model, fgrid, Phase22, fdamp_22, fring_22) .+ ifelse.(fgrid .<= fcutPar, timeshift .*fgrid .+ lina .+ phifRef, 0.)
+    phase_22    =  etaInv .*_completePhase(model, fgrid, Phase22, fdamp_22, fring_22; deltaVminus2=o1) .+ ifelse.(fgrid .<= fcutPar, timeshift .*fgrid .+ lina .+ phifRef, 0.)
     ampl_22 = Ampl(PhenomXAS(), f, mc, eta, chi1, chi2, dL) 
 
     if debug == true
@@ -956,12 +955,12 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
                 
                 #// we compute dphi22(fref)
                 #Phase22 = Phase_22_ConnectionCoefficients(mc, eta, chi1, chi2) # ANDREA maybe no need to redo this function after 22, use the same coefficients
-                timeshift=TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22)
+                timeshift=TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=o1)
                 
                 phi0_S = 0;
 
                 #// we impose that dphiS(fref)-dphi22(fref) has the value given by our fit
-                dphi22ref = 1. /eta*_completePhaseDer(model, frefRD, Phase22, fdamp_22, fring_22)+timeshift; # ANDREA it is subtracted from timeshift, maybe do it properly linb - 2. *pi*(500. +psi4tostrain)
+                dphi22ref = 1. /eta*_completePhaseDer(model, frefRD, Phase22, fdamp_22, fring_22; deltaVminus2=o1)+timeshift; # ANDREA it is subtracted from timeshift, maybe do it properly linb - 2. *pi*(500. +psi4tostrain)
                 ModeMixingCoeffs = [alpha0_S, alphaL_S, alpha2_S, alpha4_S, phi0_S]
                 alpha0_S = alpha0_S +dphi22ref+tshift_-RD_Phase_Ansatz(model, frefRD, 0., 0., 0., fring, fdamp, ModeMixingCoeffs,  true)
                 
@@ -976,7 +975,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
                 #MfRef = fRef * M * GMsun_over_c3 
 
                 #tmp = Phi(PhenomXAS(), [fRef, frefRD/(M * GMsun_over_c3 )] , mc, eta, chi1, chi2) # Andrea da rifare con coeffs in Phase22
-                tmp =_completePhase(model, [MfRef, frefRD], Phase22, fdamp_22, fring_22)
+                tmp =_completePhase(model, [MfRef, frefRD], Phase22, fdamp_22, fring_22; deltaVminus2=o1)
                 phiref22 = -1. ./ eta*tmp[1] - timeshift*MfRef - phaseshift + 2.0*phi0 + pi/4;
                 phi22ref= 1. /eta*tmp[2] + timeshift*frefRD + phaseshift + phiref22;
 
@@ -1412,7 +1411,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
             
             amp22 =  exp(- dfr * gammaR ) * (gammaD13) / (dfr*dfr + gammaD2);
             #phiXAS = Phi(PhenomXAS(), ff/(M * GMsun_over_c3 ), mc, eta, chi1, chi2) # the phase of the 22 mode directly from PhenomXAS # from IMRPhenomX_Phase_22
-            phiXAS = _completePhase(model, ff, Phase22, fdamp_22, fring_22)
+            phiXAS = _completePhase(model, ff, Phase22, fdamp_22, fring_22; deltaVminus2=o1)
             phi22=1. /eta * phiXAS + timeshift*Mf + phaseshift + phiref22;
             wf22R = amp22 * exp(1im * phi22);
             if IMRPhenomXHMRingdownAmpVersion != 0
@@ -1763,7 +1762,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
             for i in 1:3
                 FF=two_over_m*CollocationPointsFreqsPhaseInter[i];
                 # _completePhaseDer is IMRPhenomX_dPhase_22
-                insp_vals[i]=1. /eta* _completePhaseDer(model,FF, Phase22, fdamp_22, fring_22);
+                insp_vals[i]=1. /eta* _completePhaseDer(model,FF, Phase22, fdamp_22, fring_22; deltaVminus2=o1);
             end
     
             diff12=insp_vals[1]-insp_vals[2];
@@ -2145,7 +2144,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
     
     
         # compute explicitly the phase normalization to be applied to IMRPhenomX, when mode-mixing is on this will have been already computed in GetSpheroidalCoefficients 
-        tmp = _completePhase(model,[MfRef,two_over_m*falign], Phase22, fdamp_22, fring_22)
+        tmp = _completePhase(model,[MfRef,two_over_m*falign], Phase22, fdamp_22, fring_22; deltaVminus2=o1)
         phi_MfRef = tmp[1]
         phi_falign = tmp[2]
 
@@ -2153,7 +2152,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
         if ModeMixingOn== false
 
             # Phase22 = Phase_22_ConnectionCoefficients(mc, eta, chi1, chi2)
-            timeshift= TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22)
+            timeshift= TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=o1)
             phiref22 = -1 ./eta*phi_MfRef - timeshift*MfRef - phaseshift + 2.0*phi0 + pi/4.0 
 
         end
@@ -2586,18 +2585,18 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
 end
 
 
-function _completePhaseDer(model::PhenomXHM, infreqs, Phase22, fdamp, fring)
-    return @. ifelse(infreqs <= Phase22.fPhaseMatchIN, (infreqs^(-8. /3.))*Phase22.dphase0*(Phase22.dphi0 + Phase22.dphi1*(infreqs^(1. /3.)) + Phase22.dphi2*(infreqs^(2. /3.)) + Phase22.dphi3*infreqs + Phase22.dphi4*(infreqs^(4. /3.)) + Phase22.dphi5*(infreqs^(5. /3.)) + (Phase22.dphi6 + Phase22.dphi6L*log(infreqs))*infreqs*infreqs + Phase22.dphi7*(infreqs^(7. /3.)) + (Phase22.dphi8 + Phase22.dphi8L*log(infreqs))*(infreqs^(8. /3.)) + (Phase22.dphi9  + Phase22.dphi9L*log(infreqs))*infreqs*infreqs*infreqs + Phase22.a0coloc*(infreqs^(8. /3.)) + Phase22.a1coloc*infreqs*infreqs*infreqs + Phase22.a2coloc*(infreqs^(10. /3.)) + Phase22.a3coloc*(infreqs^(11. /3.)) + Phase22.a4coloc*(infreqs^4)), ifelse(infreqs <= Phase22.fPhaseMatchIM, Phase22.b0coloc + Phase22.b1coloc/infreqs + Phase22.b2coloc/(infreqs*infreqs) + Phase22.b3coloc/(infreqs*infreqs*infreqs) + Phase22.b4coloc/(infreqs*infreqs*infreqs*infreqs) + (4. *Phase22.cLcoloc) / ((4. *fdamp*fdamp) + (infreqs - fring)*(infreqs - fring)) + Phase22.C2Int, (Phase22.c0coloc + Phase22.c1coloc*(infreqs^(-1. /3.)) + Phase22.c2coloc/(infreqs*infreqs) + Phase22.c4coloc/(infreqs*infreqs*infreqs*infreqs) + (Phase22.cLcoloc / (fdamp*fdamp + (infreqs - fring)*(infreqs - fring)))) + Phase22.C2MRD))
+function _completePhaseDer(model::PhenomXHM, infreqs, Phase22, fdamp, fring; deltaVminus2 = 0.0)
+    return @. ifelse(infreqs <= Phase22.fPhaseMatchIN, (infreqs^(-8. /3.))*Phase22.dphase0*(-(7.0 / 5.0) * deltaVminus2 * pi^(-2.0 / 3.0) * infreqs^(-2.0 / 3.0) + Phase22.dphi0 + Phase22.dphi1*(infreqs^(1. /3.)) + Phase22.dphi2*(infreqs^(2. /3.)) + Phase22.dphi3*infreqs + Phase22.dphi4*(infreqs^(4. /3.)) + Phase22.dphi5*(infreqs^(5. /3.)) + (Phase22.dphi6 + Phase22.dphi6L*log(infreqs))*infreqs*infreqs + Phase22.dphi7*(infreqs^(7. /3.)) + (Phase22.dphi8 + Phase22.dphi8L*log(infreqs))*(infreqs^(8. /3.)) + (Phase22.dphi9  + Phase22.dphi9L*log(infreqs))*infreqs*infreqs*infreqs + Phase22.a0coloc*(infreqs^(8. /3.)) + Phase22.a1coloc*infreqs*infreqs*infreqs + Phase22.a2coloc*(infreqs^(10. /3.)) + Phase22.a3coloc*(infreqs^(11. /3.)) + Phase22.a4coloc*(infreqs^4)), ifelse(infreqs <= Phase22.fPhaseMatchIM, Phase22.b0coloc + Phase22.b1coloc/infreqs + Phase22.b2coloc/(infreqs*infreqs) + Phase22.b3coloc/(infreqs*infreqs*infreqs) + Phase22.b4coloc/(infreqs*infreqs*infreqs*infreqs) + (4. *Phase22.cLcoloc) / ((4. *fdamp*fdamp) + (infreqs - fring)*(infreqs - fring)) + Phase22.C2Int, (Phase22.c0coloc + Phase22.c1coloc*(infreqs^(-1. /3.)) + Phase22.c2coloc/(infreqs*infreqs) + Phase22.c4coloc/(infreqs*infreqs*infreqs*infreqs) + (Phase22.cLcoloc / (fdamp*fdamp + (infreqs - fring)*(infreqs - fring)))) + Phase22.C2MRD))
 end
 
-function _completePhase(model::PhenomXHM, infreqs, Phase22, fdamp, fring, fcutPar = 0.3)
+function _completePhase(model::PhenomXHM, infreqs, Phase22, fdamp, fring, fcutPar = 0.3; deltaVminus2 = 0.0)
     phiNorm = - (3. * (pi^(-5. /3.)))/ 128.
     c4ov3   = Phase22.c4coloc / 3.
     cLovfda = Phase22.cLcoloc / fdamp
-    return @. ifelse(infreqs <= Phase22.fPhaseMatchIN, phiNorm*(infreqs^(-5. /3.))*(Phase22.phi0 + Phase22.phi1*(infreqs^(1. /3.)) + Phase22.phi2*(infreqs^(2. /3.)) + Phase22.phi3*infreqs + Phase22.phi4*(infreqs^(4. /3.)) + (Phase22.phi5 + Phase22.phi5L*log(infreqs))*(infreqs^(5. /3.)) + (Phase22.phi6 + Phase22.phi6L*log(infreqs))*infreqs*infreqs + Phase22.phi7*(infreqs^(7. /3.)) + (Phase22.phi8 + Phase22.phi8L*log(infreqs))*(infreqs^(8. /3.)) + (Phase22.phi9  + Phase22.phi9L*log(infreqs))*infreqs*infreqs*infreqs + Phase22.sigma1*(infreqs^(8. /3.)) + Phase22.sigma2*(infreqs*infreqs*infreqs) + Phase22.sigma3*(infreqs^(10. /3.)) + Phase22.sigma4*(infreqs^(11. /3.)) + Phase22.sigma5*(infreqs^4)), ifelse(infreqs <= Phase22.fPhaseMatchIM, Phase22.b0coloc*infreqs + Phase22.b1coloc*log(infreqs) - Phase22.b2coloc/infreqs - Phase22.b3coloc/(infreqs*infreqs)/2. - (Phase22.b4coloc/(infreqs*infreqs*infreqs)/3.) + (2. * Phase22.cLcoloc * atan((infreqs - fring) / (2. * fdamp)))/fdamp + Phase22.C1Int + Phase22.C2Int*infreqs, ifelse(infreqs < fcutPar, (Phase22.c0coloc*infreqs + 1.5*Phase22.c1coloc*(infreqs^(2. /3.)) - Phase22.c2coloc/infreqs - c4ov3/(infreqs*infreqs*infreqs) + (cLovfda * atan((infreqs - fring)/fdamp))) + Phase22.C1MRD + Phase22.C2MRD*infreqs, 0.)))
+    return @. ifelse(infreqs <= Phase22.fPhaseMatchIN, phiNorm*(infreqs^(-5. /3.))*(- deltaVminus2 * pi^(-2.0 / 3.0) * infreqs^(-2.0 / 3.0) + Phase22.phi0 + Phase22.phi1*(infreqs^(1. /3.)) + Phase22.phi2*(infreqs^(2. /3.)) + Phase22.phi3*infreqs + Phase22.phi4*(infreqs^(4. /3.)) + (Phase22.phi5 + Phase22.phi5L*log(infreqs))*(infreqs^(5. /3.)) + (Phase22.phi6 + Phase22.phi6L*log(infreqs))*infreqs*infreqs + Phase22.phi7*(infreqs^(7. /3.)) + (Phase22.phi8 + Phase22.phi8L*log(infreqs))*(infreqs^(8. /3.)) + (Phase22.phi9  + Phase22.phi9L*log(infreqs))*infreqs*infreqs*infreqs + Phase22.sigma1*(infreqs^(8. /3.)) + Phase22.sigma2*(infreqs*infreqs*infreqs) + Phase22.sigma3*(infreqs^(10. /3.)) + Phase22.sigma4*(infreqs^(11. /3.)) + Phase22.sigma5*(infreqs^4)), ifelse(infreqs <= Phase22.fPhaseMatchIM, Phase22.b0coloc*infreqs + Phase22.b1coloc*log(infreqs) - Phase22.b2coloc/infreqs - Phase22.b3coloc/(infreqs*infreqs)/2. - (Phase22.b4coloc/(infreqs*infreqs*infreqs)/3.) + (2. * Phase22.cLcoloc * atan((infreqs - fring) / (2. * fdamp)))/fdamp + Phase22.C1Int + Phase22.C2Int*infreqs, ifelse(infreqs < fcutPar, (Phase22.c0coloc*infreqs + 1.5*Phase22.c1coloc*(infreqs^(2. /3.)) - Phase22.c2coloc/infreqs - c4ov3/(infreqs*infreqs*infreqs) + (cLovfda * atan((infreqs - fring)/fdamp))) + Phase22.C1MRD + Phase22.C2MRD*infreqs, 0.)))
 end
 
-function TimeShift_22(model, eta, Seta, totchi, dchi, fring_22, fdamp_22, Phase22)
+function TimeShift_22(model, eta, Seta, totchi, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=0.0)
 
     eta2 = eta^2
     totchi2 = totchi^2
@@ -2605,7 +2604,7 @@ function TimeShift_22(model, eta, Seta, totchi, dchi, fring_22, fdamp_22, Phase2
     delta = Seta
     lina = 0.
     linb         = ((3155.1635543201924 + 1257.9949740608242*eta - 32243.28428870599*eta2 + 347213.65466875216*eta2*eta - 1.9223851649491738e6*eta2*eta2 + 5.3035911346921865e6*eta2*eta2*eta - 5.789128656876938e6*eta2*eta2*eta2) + ((-24.181508118588667 + 115.49264174560281*eta - 380.19778216022763*eta2)*totchi + (24.72585609641552 - 328.3762360751952*eta + 725.6024119989094*eta2)*totchi2 + (23.404604124552 - 646.3410199799737*eta + 1941.8836639529036*eta2)*totchi2*totchi + (-12.814828278938885 - 325.92980012408367*eta + 1320.102640190539*eta2)*totchi2*totchi2) + (-148.17317525117338*dchi*delta*eta2))
-    dphi22Ref    = etaInv * _completePhaseDer(model, fring_22-fdamp_22, Phase22, fdamp_22, fring_22)
+    dphi22Ref    = etaInv * _completePhaseDer(model, fring_22-fdamp_22, Phase22, fdamp_22, fring_22; deltaVminus2=deltaVminus2)
     psi4tostrain = ((13.39320482758057 - 175.42481512989315*eta + 2097.425116152503*eta2 - 9862.84178637907*eta2*eta + 16026.897939722587*eta2*eta2) + ((4.7895602776763 - 163.04871764530466*eta + 609.5575850476959*eta2)*totchi + (1.3934428041390161 - 97.51812681228478*eta + 376.9200932531847*eta2)*totchi2 + (15.649521097877374 + 137.33317057388916*eta - 755.9566456906406*eta2)*totchi2*totchi + (13.097315867845788 + 149.30405703643288*eta - 764.5242164872267*eta2)*totchi2*totchi2) + (105.37711654943146*dchi*Seta*eta2))
     
     tshift         = linb - dphi22Ref - 2. *pi*(500. +psi4tostrain)
@@ -2615,6 +2614,4 @@ function TimeShift_22(model, eta, Seta, totchi, dchi, fring_22, fdamp_22, Phase2
     return tshift
 
 end
-
-
 
