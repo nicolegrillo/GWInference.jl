@@ -228,10 +228,9 @@ function _edgb_scalar_charge_factor(chi)
     return 2.0 * (sqrt(1.0 - chi^2) - 1.0 + chi^2) / chi^2
 end
 
-function _edgb_delta_phi_minus2(mc, eta, chi1, chi2, squared_alpha_EdGB_km4)
-    MsunToKm = 1.476625
+function _edgb_delta_phi_minus2(mc, eta, chi1, chi2, squared_alpha_EdGB_km4, GMsun_over_c2=uc.GMsun_over_c2)
 
-    total_mass_km = mc / eta^(3.0 / 5.0) * MsunToKm
+    total_mass_km = mc / eta^(3.0 / 5.0) * GMsun_over_c2
     root = ifelse(eta < 0.25, sqrt(1.0 - 4.0 * eta), 0.0)
     # find two masses both in km
     m1 = 0.5 * total_mass_km * (1.0 + root)
@@ -251,9 +250,9 @@ function _edgb_delta_phi_minus2(mc, eta, chi1, chi2, squared_alpha_EdGB_km4)
     return (128.0 / 3.0) * beta_EdGB * eta^(-2.0 / 5.0) # not so sure about conversion
 end
 
-function _edgb_small_coupling_ratio(mc, eta, sqrt_alpha_EdGB_km)
-    MsunToKm = 1.476625
-    total_mass_km = mc / eta^(3.0 / 5.0) * MsunToKm
+function _edgb_small_coupling_ratio(mc, eta, sqrt_alpha_EdGB_km, GMsun_over_c2=uc.GMsun_over_c2)
+
+    total_mass_km = mc / eta^(3.0 / 5.0) * GMsun_over_c2
     root = ifelse(eta < 0.25, sqrt(1.0 - 4.0 * eta), 0.0)
     m1 = 0.5 * total_mass_km * (1.0 + root)
     m2 = 0.5 * total_mass_km * (1.0 - root)
