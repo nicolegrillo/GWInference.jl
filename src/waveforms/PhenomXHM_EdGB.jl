@@ -248,7 +248,7 @@ function _edgb_delta_phi_minus2(mc, eta, chi1, chi2, squared_alpha_EdGB_km4, GMs
         (m1^2 * s2 - m2^2 * s1)^2 /
         (total_mass_km^4 * eta^(18.0 / 5.0))
 
-    return (128.0 / 3.0) * beta_EdGB * eta^(-2.0 / 5.0) # not so sure about conversion
+    return (128.0 / 3.0) * beta_EdGB * eta^(-2.0 / 5.0) 
 end
 
 function _edgb_small_coupling_ratio(mc, eta, sqrt_alpha_EdGB_km, GMsun_over_c2=uc.GMsun_over_c2)

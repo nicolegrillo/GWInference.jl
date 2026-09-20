@@ -322,6 +322,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
 
     
     Phase22 = Phase_22_ConnectionCoefficients(mc, eta, chi1, chi2; PNorder=PNorder, o1=o1)
+    deltaVminus2 = PNorder == -1.0 ? o1 : 0.0
     Amp22 = Ampl_22_ConnectionCoefficients(mc, eta, chi1, chi2, dL)
 
     psi4tostrain = ((13.39320482758057 - 175.42481512989315*eta + 2097.425116152503*eta2 - 9862.84178637907*eta2*eta + 16026.897939722587*eta2*eta2) + ((4.7895602776763 - 163.04871764530466*eta + 609.5575850476959*eta2)*totchi + (1.3934428041390161 - 97.51812681228478*eta + 376.9200932531847*eta2)*totchi2 + (15.649521097877374 + 137.33317057388916*eta - 755.9566456906406*eta2)*totchi2*totchi + (13.097315867845788 + 149.30405703643288*eta - 764.5242164872267*eta2)*totchi2*totchi2) + (105.37711654943146*dchi*Seta*eta2))
@@ -329,11 +330,11 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
 
     lina = 0.0
 
-    timeshift= TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=o1)
-    phifRef = -(etaInv*_completePhase(model, MfRef, Phase22, fdamp_22, fring_22; deltaVminus2=o1) + timeshift*MfRef + lina) + pi/4. + pi
+    timeshift= TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=deltaVminus2)
+    phifRef = -(etaInv*_completePhase(model, MfRef, Phase22, fdamp_22, fring_22; deltaVminus2=deltaVminus2) + timeshift*MfRef + lina) + pi/4. + pi
     
     
-    phase_22    =  etaInv .*_completePhase(model, fgrid, Phase22, fdamp_22, fring_22; deltaVminus2=o1) .+ ifelse.(fgrid .<= fcutPar, timeshift .*fgrid .+ lina .+ phifRef, 0.)
+    phase_22    =  etaInv .*_completePhase(model, fgrid, Phase22, fdamp_22, fring_22; deltaVminus2=deltaVminus2) .+ ifelse.(fgrid .<= fcutPar, timeshift .*fgrid .+ lina .+ phifRef, 0.)
     ampl_22 = Ampl(PhenomXAS(), f, mc, eta, chi1, chi2, dL) 
 
     if debug == true
@@ -955,12 +956,12 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
                 
                 #// we compute dphi22(fref)
                 #Phase22 = Phase_22_ConnectionCoefficients(mc, eta, chi1, chi2) # ANDREA maybe no need to redo this function after 22, use the same coefficients
-                timeshift=TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=o1)
+                timeshift=TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=deltaVminus2)
                 
                 phi0_S = 0;
 
                 #// we impose that dphiS(fref)-dphi22(fref) has the value given by our fit
-                dphi22ref = 1. /eta*_completePhaseDer(model, frefRD, Phase22, fdamp_22, fring_22; deltaVminus2=o1)+timeshift; # ANDREA it is subtracted from timeshift, maybe do it properly linb - 2. *pi*(500. +psi4tostrain)
+                dphi22ref = 1. /eta*_completePhaseDer(model, frefRD, Phase22, fdamp_22, fring_22; deltaVminus2=deltaVminus2)+timeshift; # ANDREA it is subtracted from timeshift, maybe do it properly linb - 2. *pi*(500. +psi4tostrain)
                 ModeMixingCoeffs = [alpha0_S, alphaL_S, alpha2_S, alpha4_S, phi0_S]
                 alpha0_S = alpha0_S +dphi22ref+tshift_-RD_Phase_Ansatz(model, frefRD, 0., 0., 0., fring, fdamp, ModeMixingCoeffs,  true)
                 
@@ -975,7 +976,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
                 #MfRef = fRef * M * GMsun_over_c3 
 
                 #tmp = Phi(PhenomXAS(), [fRef, frefRD/(M * GMsun_over_c3 )] , mc, eta, chi1, chi2) # Andrea da rifare con coeffs in Phase22
-                tmp =_completePhase(model, [MfRef, frefRD], Phase22, fdamp_22, fring_22; deltaVminus2=o1)
+                tmp =_completePhase(model, [MfRef, frefRD], Phase22, fdamp_22, fring_22; deltaVminus2=deltaVminus2)
                 phiref22 = -1. ./ eta*tmp[1] - timeshift*MfRef - phaseshift + 2.0*phi0 + pi/4;
                 phi22ref= 1. /eta*tmp[2] + timeshift*frefRD + phaseshift + phiref22;
 
@@ -1411,7 +1412,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
             
             amp22 =  exp(- dfr * gammaR ) * (gammaD13) / (dfr*dfr + gammaD2);
             #phiXAS = Phi(PhenomXAS(), ff/(M * GMsun_over_c3 ), mc, eta, chi1, chi2) # the phase of the 22 mode directly from PhenomXAS # from IMRPhenomX_Phase_22
-            phiXAS = _completePhase(model, ff, Phase22, fdamp_22, fring_22; deltaVminus2=o1)
+            phiXAS = _completePhase(model, ff, Phase22, fdamp_22, fring_22; deltaVminus2=deltaVminus2)
             phi22=1. /eta * phiXAS + timeshift*Mf + phaseshift + phiref22;
             wf22R = amp22 * exp(1im * phi22);
             if IMRPhenomXHMRingdownAmpVersion != 0
@@ -1762,7 +1763,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
             for i in 1:3
                 FF=two_over_m*CollocationPointsFreqsPhaseInter[i];
                 # _completePhaseDer is IMRPhenomX_dPhase_22
-                insp_vals[i]=1. /eta* _completePhaseDer(model,FF, Phase22, fdamp_22, fring_22; deltaVminus2=o1);
+                insp_vals[i]=1. /eta* _completePhaseDer(model,FF, Phase22, fdamp_22, fring_22; deltaVminus2=deltaVminus2);
             end
     
             diff12=insp_vals[1]-insp_vals[2];
@@ -2144,7 +2145,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
     
     
         # compute explicitly the phase normalization to be applied to IMRPhenomX, when mode-mixing is on this will have been already computed in GetSpheroidalCoefficients 
-        tmp = _completePhase(model,[MfRef,two_over_m*falign], Phase22, fdamp_22, fring_22; deltaVminus2=o1)
+        tmp = _completePhase(model,[MfRef,two_over_m*falign], Phase22, fdamp_22, fring_22; deltaVminus2=deltaVminus2)
         phi_MfRef = tmp[1]
         phi_falign = tmp[2]
 
@@ -2152,7 +2153,7 @@ function hphc(model::PhenomXHM, f, mc, eta, chi1, chi2, dL, iota;
         if ModeMixingOn== false
 
             # Phase22 = Phase_22_ConnectionCoefficients(mc, eta, chi1, chi2)
-            timeshift= TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=o1)
+            timeshift= TimeShift_22(model, eta, Seta, S, dchi, fring_22, fdamp_22, Phase22; deltaVminus2=deltaVminus2)
             phiref22 = -1 ./eta*phi_MfRef - timeshift*MfRef - phaseshift + 2.0*phi0 + pi/4.0 
 
         end
@@ -2614,4 +2615,3 @@ function TimeShift_22(model, eta, Seta, totchi, dchi, fring_22, fdamp_22, Phase2
     return tshift
 
 end
-

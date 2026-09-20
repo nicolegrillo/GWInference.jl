@@ -55,11 +55,17 @@ function Phase_22_ConnectionCoefficients(mc,
 
     # Compute the -1PN correction to the phase if requested (NICOLE's new addition)
     deltaVminus2 = 0.0
+    deltaVplus2 = 0.0
+    deltaVplus4 = 0.0
 
     if PNorder == -1.0
         deltaVminus2 = o1
+    elseif PNorder == 1.0
+        deltaVplus2 = o1
+    elseif PNorder == 2.0
+        deltaVplus4 = o1
     elseif !isnothing(PNorder)
-        error("Only the -1PN correction is implemented for PhenomXHM_TIGER_spinless (for now).")
+        error("Only the -1PN, 1PN, and 2PN corrections are implemented for PhenomXHM_TIGER_spinless (for now).")
     end
 
     gpoints4 = [0.0, 1.0 / 4.0, 3.0 / 4.0, 1.0]
@@ -295,17 +301,17 @@ function Phase_22_ConnectionCoefficients(mc,
     
     # TaylorF2 PN Coefficients -----> inspiral phase expansion
     # -1PN BGR correction, see Eq. (4.0) of arXiv:1905.00870v3
-    phiminus1 = - deltaVminus2 * (pi^(-2.0 / 3.0))
+    phiminus2 = - deltaVminus2 * (pi^(-2.0 / 3.0))
     # Newtonian
     phi0   = 1.
     # .5 PN
     phi1   = 0.
-    # 1 PN
-    phi2   = (3715. /756. + (55. *eta)/9.) * (pi^(2. /3.))
+    # 1 PN 
+    phi2   = (3715. /756. + (55. *eta)/9.) * (pi^(2. /3.)) * (1.0 + deltaVplus2)
     # 1.5 PN, Non-Spinning and Spin-Orbit
     phi3   = -16.0*pi*pi + ((113. *(chi1 + chi2 + chi1*delta - chi2*delta) - 76. *(chi1 + chi2)*eta)/6.) * pi
     # 2 PN, Non-Spinning and Spin-Spin
-    phi4   = (15293365. /508032. + (27145. *eta)/504. + (3085*eta2)/72.)*(pi^(4. /3.)) + ((-5. *(81. *chi12*(1. + delta - 2. *eta) + 316. *chi1dotchi2*eta - 81. *chi22*(-1. + delta + 2. *eta)))/16.)*(pi^(4. /3.))
+    phi4   = ((15293365. /508032. + (27145. *eta)/504. + (3085*eta2)/72.)*(pi^(4. /3.)) + ((-5. *(81. *chi12*(1. + delta - 2. *eta) + 316. *chi1dotchi2*eta - 81. *chi22*(-1. + delta + 2. *eta)))/16.)*(pi^(4. /3.))) * (1. + deltaVplus4)# NEW! added +2PN order correction in the TIGER form of φ_4 (1 + δφ_4)
     # 2.5 PN, Non-Spinning and Spin-Orbit
     phi5L  = (((5. *(46374. - 6552. *eta)*pi)/4536.) + ((-732985. *(chi1 + chi2 + chi1*delta - chi2*delta) - 560. *(-1213. *(chi1 + chi2) + 63. *(chi1 - chi2)*delta)*eta + 85680. *(chi1 + chi2)*eta2)/4536.)) * (pi^(5. /3.))
     phi5   = 0.
@@ -333,12 +339,12 @@ function Phase_22_ConnectionCoefficients(mc,
     end
 
     # Normalized Phase Derivatives
-    dphiminus1 = - (7.0 / 5.0) * deltaVminus2 * pi^(-2.0 / 3.0)
+    dphiminus2 = - (7.0 / 5.0) * deltaVminus2 * pi^(-2.0 / 3.0)
     dphi0  = 1.0
     dphi1  = 0.0
-    dphi2  = (743. /252. + (11. *eta)/3. )*(pi^(2. /3.))
+    dphi2  = (743. /252. + (11. *eta)/3. )*(pi^(2. /3.)) * (1.0 + deltaVplus2)
     dphi3  = ((chi2*(113. - 113. *delta - 76. *eta) + chi1*(113. *(1. + delta) - 76. *eta) - 96. *pi)/15.) * pi
-    dphi4  = (3058673/508032. - (81*chi12*(1 + delta))/16. - (79*chi1dotchi2*eta)/4. + (81*chi22*(-1 + delta + 2*eta))/16. + (eta*(5429 + 5103*chi12 + 4319*eta))/504. ) * (pi^(4. /3.))
+    dphi4  = (3058673/508032. - (81*chi12*(1 + delta))/16. - (79*chi1dotchi2*eta)/4. + (81*chi22*(-1 + delta + 2*eta))/16. + (eta*(5429 + 5103*chi12 + 4319*eta))/504. ) * (pi^(4. /3.)) * (1.0 + deltaVplus4)
     dphi5  = ( (-146597*chi2*delta + 146597*(chi1 + chi2 + chi1*delta) + 112*(chi1*(-1213 + 63*delta) - chi2*(1213 + 63*delta))*eta - 17136*(chi1 + chi2)*eta2 + 6*(-7729 + 1092*eta)*pi)/1512. ) * (pi^(5. /3.))
     dphi6  = ( (-10052469856691 + 24236159077900*eta)/2.34710784e10 + (6848*MathConstants.eulergamma)/105. + (-951489*chi12*(1 + delta) - 180*chi1dotchi2*eta*(11763 + 12488*eta) + 63*chi22*(15103*(-1 + delta) + 2*(21683 - 6580*delta)*eta + 9808*eta2) + 7*eta*(18*chi12*(21683 + 6580*delta + 4904*eta) + eta*(-45633 + 102260*eta)) - 12096*(chi2*(227 - 227*delta - 156*eta) + chi1*(227*(1 + delta) - 156*eta))*pi - 3024*(-512 + 451*eta)*pi*pi )/36288. + (13696*log(2.))/105. + (6848*log(pi))/315.0   ) * pi*pi
     dphi6L = (  6848 / 315. ) * pi*pi
@@ -362,7 +368,7 @@ function Phase_22_ConnectionCoefficients(mc,
 
     # Calculate phase at fmatchIN
     # First the standard TaylorF2 part + (NEW!) the BGR correction
-    phaseIN = dphiminus1 * (fPhaseMatchIN^(-2.0 / 3.0)) + dphi0 + dphi1*(fPhaseMatchIN^(1. /3.)) + dphi2*(fPhaseMatchIN^(2. /3.)) + dphi3*fPhaseMatchIN + dphi4*(fPhaseMatchIN^(4. /3.)) + dphi5*(fPhaseMatchIN^(5. /3.)) + (dphi6 + dphi6L*log(fPhaseMatchIN))*fPhaseMatchIN*fPhaseMatchIN + dphi7*(fPhaseMatchIN^(7. /3.)) + (dphi8 + dphi8L*log(fPhaseMatchIN))*(fPhaseMatchIN^(8. /3.)) + (dphi9 + dphi9L*log(fPhaseMatchIN))*fPhaseMatchIN*fPhaseMatchIN*fPhaseMatchIN
+    phaseIN = dphiminus2 * (fPhaseMatchIN^(-2.0 / 3.0)) + dphi0 + dphi1*(fPhaseMatchIN^(1. /3.)) + dphi2*(fPhaseMatchIN^(2. /3.)) + dphi3*fPhaseMatchIN + dphi4*(fPhaseMatchIN^(4. /3.)) + dphi5*(fPhaseMatchIN^(5. /3.)) + (dphi6 + dphi6L*log(fPhaseMatchIN))*fPhaseMatchIN*fPhaseMatchIN + dphi7*(fPhaseMatchIN^(7. /3.)) + (dphi8 + dphi8L*log(fPhaseMatchIN))*(fPhaseMatchIN^(8. /3.)) + (dphi9 + dphi9L*log(fPhaseMatchIN))*fPhaseMatchIN*fPhaseMatchIN*fPhaseMatchIN
     # Then the pseudo-PN
     phaseIN = phaseIN + a0coloc*(fPhaseMatchIN^(8. /3.)) + a1coloc*fPhaseMatchIN*fPhaseMatchIN*fPhaseMatchIN + a2coloc*(fPhaseMatchIN^(10. /3.)) + a3coloc*(fPhaseMatchIN^(11. /3.)) + a4coloc*(fPhaseMatchIN^4)
     # Finally the overall phase
@@ -463,7 +469,7 @@ function Phase_22_ConnectionCoefficients(mc,
     C2Int = phaseIN - DPhiInt
     # Inspiral phase at fPhaseMatchIN (+ NEW! -1PN term)
     phiIN =
-        phiminus1 * (fPhaseMatchIN^(-2.0 / 3.0)) + # added -1PN term 
+        phiminus2 * (fPhaseMatchIN^(-2.0 / 3.0)) + # added -1PN term 
         phi0 +
         phi1 * (fPhaseMatchIN^(1.0 / 3.0)) +
         phi2 * (fPhaseMatchIN^(2.0 / 3.0)) +
