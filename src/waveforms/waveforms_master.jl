@@ -16,7 +16,7 @@ using Elliptic
 using LinearAlgebra
 
 
-export TaylorF2, PhenomD, PhenomD_NRTidal, PhenomHM, PhenomNSBH, PhenomXAS, PhenomXHM, PhenomXPHM, PhenomD_TIGER, PhenomHM_TIGER, PhenomD_TIGER_spinless, PhenomHM_TIGER_spinless, PhenomXHM_TIGER_spinless, PhenomXHM_EdGB, PhenomXHM_dCS, PhenomXHM_MG
+export TaylorF2, PhenomD, PhenomD_NRTidal, PhenomHM, PhenomNSBH, PhenomXAS, PhenomXHM, PhenomXPHM, PhenomD_TIGER, PhenomHM_TIGER, PhenomD_TIGER_spinless, PhenomHM_TIGER_spinless, PhenomXHM_TIGER_spinless, PhenomXHM_EdGB, PhenomXHM_dCS, PhenomXHM_MG, PhenomXHM_Ecc
 export Model, GrModel, BgrModel
 export Ampl, Phi, PolAbs, Pol, _npar, _event_type, _available_waveforms, _fcut, _finalspin, _radiatednrg, _tau_star, _list_polarizations, hphc
 
@@ -206,6 +206,12 @@ struct PhenomXHM_MG <: BgrModel
     PhenomXHM_MG() = new(1.0, "BBH")
 end
 
+struct PhenomXHM_Ecc <: BgrModel
+    PNorder::Float64
+    event_type::String
+    PhenomXHM_Ecc() = new(-19.0/6.0, "BBH")
+end
+
 """
 Returns the event_type of a struct<:Model as a string.
 """
@@ -214,7 +220,7 @@ function _event_type(model::Model)
 end
 
 function _available_waveforms()
-    return ["TaylorF2", "PhenomD", "PhenomHM", "PhenomD_NRTidal", "PhenomNSBH", "PhenomXAS", "PhenomXHM", "PhenomXPHM", "PhenomD_TIGER", "PhenomHM_TIGER", "PhenomD_TIGER_spinless", "PhenomHM_TIGER_spinless", "PhenomXHM_TIGER_spinless", "PhenomXHM_EdGB", "PhenomXHM_dCS", "PhenomXHM_MG"]
+    return ["TaylorF2", "PhenomD", "PhenomHM", "PhenomD_NRTidal", "PhenomNSBH", "PhenomXAS", "PhenomXHM", "PhenomXPHM", "PhenomD_TIGER", "PhenomHM_TIGER", "PhenomD_TIGER_spinless", "PhenomHM_TIGER_spinless", "PhenomXHM_TIGER_spinless", "PhenomXHM_EdGB", "PhenomXHM_dCS", "PhenomXHM_MG", "PhenomXHM_Ecc"]
 end
 
 #@doc "Function to check the available waveforms and return the corresponding model."
@@ -255,6 +261,8 @@ function _available_waveforms(waveform::String)
         return PhenomXHM_dCS()
     elseif waveform == "PhenomXHM_MG"
         return PhenomXHM_MG()
+    elseif waveform == "PhenomXHM_Ecc" # not very useful if already embedded in PhenomXHM 
+        return PhenomXHM_Ecc()
     else
         error("Waveform not available. Choose between: $(_available_waveforms())")
     end
@@ -282,6 +290,7 @@ include("PhenomHM_TIGER_spinless.jl")
 include("PhenomXHM_EdGB.jl")
 include("PhenomXHM_dCS.jl")
 include("PhenomXHM_MG.jl")
+include("PhenomXHM_Ecc.jl")
 
 ##############################################################################
 #   STRUCTURE USED IN THE MODULE
@@ -796,6 +805,10 @@ function _npar(model::PhenomXHM_MG)
     return 12
 end
 
+function _npar(model::PhenomXHM_Ecc)
+    return 12
+end
+
 function Phi(model::PhenomXHM, f, mc, eta, chi1, chi2, Lambda1, Lambda2; GMsun_over_c3 = uc.GMsun_over_c3)
     return Phi(model, f, mc, eta, chi1, chi2, GMsun_over_c3 = GMsun_over_c3)
 end
@@ -820,6 +833,10 @@ function _list_polarizations(model::PhenomXHM_dCS)
 end
 
 function _list_polarizations(model::PhenomXHM_MG)
+    return ["plus", "cross"]
+end
+
+function _list_polarizations(model::PhenomXHM_Ecc)
     return ["plus", "cross"]
 end
 

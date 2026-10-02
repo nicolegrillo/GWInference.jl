@@ -16,3 +16,4 @@ docs/
 *.ipynb_checkpoints/.idea/
 
 .idea/
+.DS_Store

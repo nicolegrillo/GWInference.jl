@@ -1,5 +1,59 @@
 # Andrea needs to fill the structure Phase22
 
+# DISCLAIMER: This code has been modified to include eccentricity in the phase of the waveform irregardless of the BGR effect. 
+# The modification is done through phase-added terms depending on e_0(f_0), a function of the set frequency of reference, as per arXiv:0906.0313. 
+# The max order expansion is e_0^8, see Eq. (4.28), restricted to the dominant (l=2) harmonic.
+
+"""
+The _ecc_phase_coeffs returns the phi_n/dphi_n coefficients for 4 new PN-order terms (at PN order
+-19/9 in f --> -19/3 * 1/2 = -19 / 6 in v, -38/9 in f --> -38/3 * 1/2 = -19/3 in v, -76/9 in f --> -76/3 * 1/2 =  -38/3 in f, 
+-19/3 in f --> -19 * 1/2 = -19/2 in v, and as f ∝ v^3 ), each as exponent of (Mf)^f_coeff.
+Each coefficient is a polynomial in e0^2, collecting every e0^(2j) contribution (j=1..4)
+to that particular frequency power in Eq. (4.28). It is independent of PNorder/o1, so it can
+be combined with any of the EdGB/MG/dCS corrections.
+
+Mtot is the TOTAL mass in solar masses (M = mc/eta^0.6), f0 the reference GW frequency
+(Hz) at which e0 is defined.
+"""
+function _ecc_phase_coeffs(Mtot, eta, e0, f0, GMsun_over_c3=uc.GMsun_over_c3)
+
+    Mf0 = Mtot * GMsun_over_c3 * f0 # dimensionless, M*f0 in geometric units
+    e0sq = e0^2
+
+    # useful to define as they are often used in expressions
+    e0_4 = e0sq^2
+    e0_6 = e0sq^3
+    e0_8 = e0sq^4
+
+    # coefficient of (Mf)^(-19/9), i.e. v^(-19/3), -19/6PN order
+    C1 = -(2355.0 / 1462.0) * e0sq -
+         (2608555.0 / 444448.0) * e0_4 -
+         (1326481225.0 / 101334144.0) * e0_6 -
+         (6505217202575.0 / 277250217984.0) * e0_8
+    # coefficient of (Mf)^(-38/9), i.e. v^(-38/3), -19/3PN order
+    C2 = (5222765.0 / 998944.0) * e0_4 +
+         (17355248095.0 / 455518464.0) * e0_6 +
+         (128274289063885.0 / 830865678336.0) * e0_8
+    # coefficient of (Mf)^(-19/3), i.e. v^(-19), -19/2PN order
+    C3 = -(75356125.0 / 3326976.0) * e0_6 -
+         (250408403375.0 / 1011400704.0) * e0_8
+    # coefficient of (Mf)^(-76/9), i.e. v^(-76/3), -38/3PN order
+    C4 = (4537813337273.0 / 39444627456.0) * e0_8
+
+    phiecc1 = C1 * Mf0^(19.0 / 9.0)
+    phiecc2 = C2 * Mf0^(38.0 / 9.0)
+    phiecc3 = C3 * Mf0^(19.0 / 3.0)
+    phiecc4 = C4 * Mf0^(76.0 / 9.0)
+
+    # TIGER has dphi = dphi_GR (1 + dphin / dphiGR) with dphin = d(phin * phiGR): coefficients at front are -(exponent_BGR - 5/3) * 3/5 
+    dphiecc1 = phiecc1 * (34.0 / 15.0)
+    dphiecc2 = phiecc2 * (53.0 / 15.0)
+    dphiecc3 = phiecc3 * (24.0 / 5.0)
+    dphiecc4 = phiecc4 * (91.0 / 15.0)
+
+    return phiecc1, phiecc2, phiecc3, phiecc4, dphiecc1, dphiecc2, dphiecc3, dphiecc4
+end
+
 function Phase_22_ConnectionCoefficients(mc,
     eta,
     chi1,
@@ -9,10 +63,12 @@ function Phase_22_ConnectionCoefficients(mc,
     fInsJoin_PHI = 0.018,
     InsPhaseVersion=104,
     IntPhaseVersion=105,
-    final_spin_override=nothing, 
-    PNorder=nothing, 
-    o1=0.0 # decided to add the correction here
-)  
+    final_spin_override=nothing,
+    PNorder=nothing,
+    o1=0.0, # decided to add the BGR corrections here
+    e0=0.0, # eccentricity, independent of PNorder/o1 so it composes with any BGR model, thanks to Claude. Set to zero to check it gives back GR. 
+    f0=10.0, # reference GW frequency (Hz) at which e0 is defined
+)
     
 
     
@@ -53,20 +109,28 @@ function Phase_22_ConnectionCoefficients(mc,
 
     dphase0 = 5.0 / (128.0 * (pi^(5.0 / 3.0)))
 
-    # Compute the -1PN correction to the phase if requested (NICOLE's new addition)
+    # (NICOLE's new addition) -----------------------------
+    # Compute the nPN correction to the phase if requested 
     deltaVminus2 = 0.0
     deltaVplus2 = 0.0
     deltaVplus4 = 0.0
 
-    if PNorder == -1.0
+    if PNorder == -1.0 # EdGB
         deltaVminus2 = o1
-    elseif PNorder == 1.0
+    elseif PNorder == 1.0 # MG
         deltaVplus2 = o1
-    elseif PNorder == 2.0
+    elseif PNorder == 2.0 # dCS
         deltaVplus4 = o1
     elseif !isnothing(PNorder)
         error("Only the -1PN, 1PN, and 2PN corrections are implemented for PhenomXHM_TIGER_spinless (for now).")
     end
+
+    # Eccentricity correction. 
+    # Independent of PNorder/o1 so it composes with any of the BGR corrections above. 
+    phiecc1, phiecc2, phiecc3, phiecc4, dphiecc1, dphiecc2, dphiecc3, dphiecc4 =
+        _ecc_phase_coeffs(M, eta, e0, f0, GMsun_over_c3)
+
+    #---------------------------------------------------------
 
     gpoints4 = [0.0, 1.0 / 4.0, 3.0 / 4.0, 1.0]
     gpoints5 = [
@@ -367,8 +431,8 @@ function Phase_22_ConnectionCoefficients(mc,
     end
 
     # Calculate phase at fmatchIN
-    # First the standard TaylorF2 part + (NEW!) the BGR correction
-    phaseIN = dphiminus2 * (fPhaseMatchIN^(-2.0 / 3.0)) + dphi0 + dphi1*(fPhaseMatchIN^(1. /3.)) + dphi2*(fPhaseMatchIN^(2. /3.)) + dphi3*fPhaseMatchIN + dphi4*(fPhaseMatchIN^(4. /3.)) + dphi5*(fPhaseMatchIN^(5. /3.)) + (dphi6 + dphi6L*log(fPhaseMatchIN))*fPhaseMatchIN*fPhaseMatchIN + dphi7*(fPhaseMatchIN^(7. /3.)) + (dphi8 + dphi8L*log(fPhaseMatchIN))*(fPhaseMatchIN^(8. /3.)) + (dphi9 + dphi9L*log(fPhaseMatchIN))*fPhaseMatchIN*fPhaseMatchIN*fPhaseMatchIN
+    # First the standard TaylorF2 part + (NEW!) the BGR corrections AND eccentricity (if required) --> new terms from GR are implemented here directly
+    phaseIN = dphiminus2 * (fPhaseMatchIN^(-2.0 / 3.0)) + dphiecc1 * (fPhaseMatchIN^(-19.0 / 9.0)) + dphiecc2 * (fPhaseMatchIN^(-38.0 / 9.0)) + dphiecc3 * (fPhaseMatchIN^(-19.0 / 3.0)) + dphiecc4 * (fPhaseMatchIN^(-76.0 / 9.0)) + dphi0 + dphi1*(fPhaseMatchIN^(1. /3.)) + dphi2*(fPhaseMatchIN^(2. /3.)) + dphi3*fPhaseMatchIN + dphi4*(fPhaseMatchIN^(4. /3.)) + dphi5*(fPhaseMatchIN^(5. /3.)) + (dphi6 + dphi6L*log(fPhaseMatchIN))*fPhaseMatchIN*fPhaseMatchIN + dphi7*(fPhaseMatchIN^(7. /3.)) + (dphi8 + dphi8L*log(fPhaseMatchIN))*(fPhaseMatchIN^(8. /3.)) + (dphi9 + dphi9L*log(fPhaseMatchIN))*fPhaseMatchIN*fPhaseMatchIN*fPhaseMatchIN
     # Then the pseudo-PN
     phaseIN = phaseIN + a0coloc*(fPhaseMatchIN^(8. /3.)) + a1coloc*fPhaseMatchIN*fPhaseMatchIN*fPhaseMatchIN + a2coloc*(fPhaseMatchIN^(10. /3.)) + a3coloc*(fPhaseMatchIN^(11. /3.)) + a4coloc*(fPhaseMatchIN^4)
     # Finally the overall phase
@@ -467,9 +531,13 @@ function Phase_22_ConnectionCoefficients(mc,
         ((4.0 * fdamp * fdamp) + (fPhaseMatchIN - fring) * (fPhaseMatchIN - fring))
 
     C2Int = phaseIN - DPhiInt
-    # Inspiral phase at fPhaseMatchIN (+ NEW! -1PN term)
+    # Inspiral phase at fPhaseMatchIN (+ NEW! -1PN term, + NEW! eccentricity terms to O(e0^8)) ---> these are the terms that do not have a corresponding term in the TaylorF2 phase
     phiIN =
-        phiminus2 * (fPhaseMatchIN^(-2.0 / 3.0)) + # added -1PN term 
+        phiminus2 * (fPhaseMatchIN^(-2.0 / 3.0)) + # added -1PN term
+        phiecc1 * (fPhaseMatchIN^(-19.0 / 9.0)) + # added -19/6PN eccentricity term
+        phiecc2 * (fPhaseMatchIN^(-38.0 / 9.0)) + # added -19/3PN eccentricity term
+        phiecc3 * (fPhaseMatchIN^(-19.0 / 3.0)) + # added -19/2PN eccentricity term
+        phiecc4 * (fPhaseMatchIN^(-76.0 / 9.0)) + # added -38/3PN eccentricity term
         phi0 +
         phi1 * (fPhaseMatchIN^(1.0 / 3.0)) +
         phi2 * (fPhaseMatchIN^(2.0 / 3.0)) +
