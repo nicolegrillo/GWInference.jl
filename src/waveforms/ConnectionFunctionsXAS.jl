@@ -66,8 +66,8 @@ function Phase_22_ConnectionCoefficients(mc,
     final_spin_override=nothing,
     PNorder=nothing,
     o1=0.0, # decided to add the BGR corrections here
-    e0=0.0, # eccentricity, independent of PNorder/o1 so it composes with any BGR model, thanks to Claude. Set to zero to check it gives back GR. 
-    f0=10.0, # reference GW frequency (Hz) at which e0 is defined
+    e0=0.0, # eccentricity, independent of PNorder/o1 so it composes with any BGR model, thanks to Claude for the idea. Set to zero to check it gives back GR. 
+    f0=10.0, # reference GW frequency (Hz) at which e0 is defined --> va bene? l'ho cercata al fly su internet.
 )
     
 
