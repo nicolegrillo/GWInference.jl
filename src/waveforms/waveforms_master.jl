@@ -16,7 +16,7 @@ using Elliptic
 using LinearAlgebra
 
 
-export TaylorF2, PhenomD, PhenomD_NRTidal, PhenomHM, PhenomNSBH, PhenomXAS, PhenomXHM, PhenomXPHM, PhenomD_TIGER, PhenomHM_TIGER, PhenomD_TIGER_spinless, PhenomHM_TIGER_spinless, PhenomXHM_TIGER_spinless, PhenomXHM_EdGB, PhenomXHM_dCS, PhenomXHM_MG, PhenomXHM_Ecc
+export TaylorF2, PhenomD, PhenomD_NRTidal, PhenomHM, PhenomNSBH, PhenomXAS, PhenomXHM, PhenomXPHM, PhenomD_TIGER, PhenomHM_TIGER, PhenomD_TIGER_spinless, PhenomHM_TIGER_spinless, PhenomXHM_TIGER_spinless, PhenomXHM_EdGB, PhenomXHM_dCS, PhenomXHM_MG, PhenomXHM_Ecc, PhenomXE
 export Model, GrModel, BgrModel
 export Ampl, Phi, PolAbs, Pol, _npar, _event_type, _available_waveforms, _fcut, _finalspin, _radiatednrg, _tau_star, _list_polarizations, hphc
 
@@ -122,6 +122,14 @@ struct PhenomD <: GrModel
     PhenomD() = new("BBH")
 end
 
+
+# Eccentric aligned-spin 22-mode model, see PhenomXE.jl. `n_harmonics` is the number of mean-anomaly harmonics (default 6).
+struct PhenomXE <: GrModel 
+    n_harmonics::Int
+    event_type::String 
+    PhenomXE(n_harmonics::Int = 6) = new(n_harmonics, "BBH")
+end
+
 struct PhenomHM <: GrModel
     event_type::String 
     PhenomHM() = new("BBH")
@@ -220,7 +228,7 @@ function _event_type(model::Model)
 end
 
 function _available_waveforms()
-    return ["TaylorF2", "PhenomD", "PhenomHM", "PhenomD_NRTidal", "PhenomNSBH", "PhenomXAS", "PhenomXHM", "PhenomXPHM", "PhenomD_TIGER", "PhenomHM_TIGER", "PhenomD_TIGER_spinless", "PhenomHM_TIGER_spinless", "PhenomXHM_TIGER_spinless", "PhenomXHM_EdGB", "PhenomXHM_dCS", "PhenomXHM_MG", "PhenomXHM_Ecc"]
+    return ["TaylorF2", "PhenomD", "PhenomHM", "PhenomD_NRTidal", "PhenomNSBH", "PhenomXAS", "PhenomXHM", "PhenomXPHM", "PhenomD_TIGER", "PhenomHM_TIGER", "PhenomD_TIGER_spinless", "PhenomHM_TIGER_spinless", "PhenomXHM_TIGER_spinless", "PhenomXHM_EdGB", "PhenomXHM_dCS", "PhenomXHM_MG", "PhenomXHM_Ecc", "PhenomXE"]
 end
 
 #@doc "Function to check the available waveforms and return the corresponding model."
@@ -263,6 +271,8 @@ function _available_waveforms(waveform::String)
         return PhenomXHM_MG()
     elseif waveform == "PhenomXHM_Ecc" # not very useful if already embedded in PhenomXHM 
         return PhenomXHM_Ecc()
+    elseif waveform == "PhenomXE"
+        return PhenomXE()
     else
         error("Waveform not available. Choose between: $(_available_waveforms())")
     end
@@ -291,6 +301,11 @@ include("PhenomXHM_EdGB.jl")
 include("PhenomXHM_dCS.jl")
 include("PhenomXHM_MG.jl")
 include("PhenomXHM_Ecc.jl")
+
+include("PhenomXE_PhenomT22.jl")   # IMRPhenomT 22-mode frequency/amplitude, needed for PhenomXE
+include("PhenomXE_dynamics.jl")    # eccentric quasi-Keplerian dynamics, needed for PhenomXE
+include("PhenomXE_amplitudes.jl")  # 3PN eccentric amplitude coefficients, needed for PhenomXE
+include("PhenomXE.jl")
 
 ##############################################################################
 #   STRUCTURE USED IN THE MODULE
@@ -900,6 +915,19 @@ function _list_polarizations(model::PhenomD_TIGER_spinless)
     return ["plus", "cross"]
  end
 
+##############################################################################
+#
+#                              PhenomXE
+#
+##############################################################################
+
+"""
+Returns the number of parameter of a struct<:Model as integer number. 
+The parameters are (mc, eta, chi1, chi2, dL, theta, phi, iota, psi, tcoal, phiCoal, ecc, meanAno).
+"""
+function _npar(model::PhenomXE)
+    return 13
+end
 
 ##############################################################################
 #
