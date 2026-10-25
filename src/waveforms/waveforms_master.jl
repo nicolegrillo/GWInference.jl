@@ -297,6 +297,7 @@ include("PhenomD_TIGER.jl")
 include("PhenomHM_TIGER.jl")
 include("PhenomD_TIGER_spinless.jl")
 include("PhenomHM_TIGER_spinless.jl")
+include("bgr_cosmology.jl")       # shared cosmology helpers (z from dL, graviton distance) for EdGB / dCS / MG
 include("PhenomXHM_EdGB.jl")
 include("PhenomXHM_dCS.jl")
 include("PhenomXHM_MG.jl")

@@ -94,9 +94,10 @@ function hphc(
     dL,
     iota,
     squared_alpha_dCS_km4;
+    D_Gpc=dL,
     kwargs...,
 )
-    delta_phi_plus4 = _dcs_delta_phi_plus4(mc, eta, chi1, chi2, squared_alpha_dCS_km4)
+    delta_phi_plus4 = _dcs_delta_phi_plus4(mc, eta, chi1, chi2, D_Gpc, squared_alpha_dCS_km4)
 
     return hphc(
         PhenomXHM_TIGER_spinless(model.PNorder),
@@ -120,10 +121,15 @@ function _dcs_scalar_charge_factor(χ)
     return (2 + 2 * χ^4 - 2 * sqrt(1 - χ^2) - χ^2 * (3 - 2 * sqrt(1 - χ^2))) / (2 * χ^3)
 end
 
-function _dcs_delta_phi_plus4(mc, eta, chi1, chi2, squared_alpha_dCS_km4, GMsun_over_c2=uc.GMsun_over_c2)
+function _dcs_delta_phi_plus4(mc, eta, chi1, chi2, D_Gpc, squared_alpha_dCS_km4, GMsun_over_c2=uc.GMsun_over_c2)
 
     GMsun_over_c2_km = GMsun_over_c2 / 1e3 # convert to km
-    total_mass_km = mc / eta^(3.0 / 5.0) * GMsun_over_c2_km
+
+    # we need to transform the detector mass to source mass, effects are in source:
+    z = get_z(D_Gpc)
+    mc_source = mc / (1+z)
+
+    total_mass_km = mc_source / eta^(3.0 / 5.0) * GMsun_over_c2_km
     root = ifelse(eta < 0.25, sqrt(1.0 - 4.0 * eta), 0.0)
     # find two masses both in km
     m1 = 0.5 * total_mass_km * (1.0 + root)
@@ -149,16 +155,16 @@ function _dcs_delta_phi_plus4(mc, eta, chi1, chi2, squared_alpha_dCS_km4, GMsun_
         (m2^2 * chi1^2 - (350.0 / 201.0) * m1 * m2 * chi1 * chi2 + m1^2 * chi2^2)
 
 
-    return (128 / 3) * β_dCS * η^(4/5) / phi4_GR # not so sure about conversion
+    return (128 / 3) * β_dCS * η^(4/5) * pi^(4/3) / phi4_GR # not so sure about conversion
 end
 
-function _dcs_small_coupling_ratio(mc, eta, sqrt_alpha_dCS_km, GMsun_over_c2=uc.GMsun_over_c2)
-
-    GMsun_over_c2_km = GMsun_over_c2 / 1e3 # convert to km
-    total_mass_km = mc / eta^(3.0 / 5.0) * GMsun_over_c2_km
-    root = ifelse(eta < 0.25, sqrt(1.0 - 4.0 * eta), 0.0)
-    m1 = 0.5 * total_mass_km * (1.0 + root)
-    m2 = 0.5 * total_mass_km * (1.0 - root)
-
-    return sqrt_alpha_dCS_km / min(m1, m2)
-end
+#function _dcs_small_coupling_ratio(mc, eta, sqrt_alpha_dCS_km, GMsun_over_c2=uc.GMsun_over_c2)
+#
+#    GMsun_over_c2_km = GMsun_over_c2 / 1e3 # convert to km
+#    total_mass_km = mc / eta^(3.0 / 5.0) * GMsun_over_c2_km
+#    root = ifelse(eta < 0.25, sqrt(1.0 - 4.0 * eta), 0.0)
+#    m1 = 0.5 * total_mass_km * (1.0 + root)
+#    m2 = 0.5 * total_mass_km * (1.0 - root)
+#
+#    return sqrt_alpha_dCS_km / min(m1, m2)
+#end

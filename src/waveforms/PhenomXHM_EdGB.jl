@@ -5,7 +5,7 @@ PhenomXHM wrappers for -1PN beyond-GR phase corrections.
 the last parameter is directly `delta_phi_minus2`.
 
 `PhenomXHM_EdGB()` is the EdGB model:
-the last parameter is `sqrt(alpha_EdGB)` in km, mapped to
+the last parameter is `alpha_EdGB^2` in km^4 (so `sqrt(alpha_EdGB) = (alpha_EdGB^2)^(1/4)` in km), mapped to
 `delta_phi_minus2` using arXiv:1905.00870 Eq. (4) and Eq. (10b).
 """
 
@@ -202,9 +202,10 @@ function hphc(
     dL,
     iota,
     squared_alpha_EdGB_km4;
+    D_Gpc=dL,
     kwargs...,
 )
-    delta_phi_minus2 = _edgb_delta_phi_minus2(mc, eta, chi1, chi2, squared_alpha_EdGB_km4)
+    delta_phi_minus2 = _edgb_delta_phi_minus2(mc, eta, chi1, chi2, D_Gpc, squared_alpha_EdGB_km4)
 
     return hphc(
         PhenomXHM_TIGER_spinless(model.PNorder),
@@ -228,10 +229,14 @@ function _edgb_scalar_charge_factor(chi)
     return 2.0 * (sqrt(1.0 - chi^2) - 1.0 + chi^2) / chi^2
 end
 
-function _edgb_delta_phi_minus2(mc, eta, chi1, chi2, squared_alpha_EdGB_km4, GMsun_over_c2=uc.GMsun_over_c2)
+function _edgb_delta_phi_minus2(mc, eta, chi1, chi2, D_Gpc, squared_alpha_EdGB_km4, GMsun_over_c2=uc.GMsun_over_c2)
 
     GMsun_over_c2_km = GMsun_over_c2 / 1e3 # convert to km
-    total_mass_km = mc / eta^(3.0 / 5.0) * GMsun_over_c2_km
+    # we need to transform the detector mass to source mass, effects are in source:
+    z = get_z(D_Gpc)
+    mc_source = mc / (1+z)
+
+    total_mass_km = mc_source / eta^(3.0 / 5.0) * GMsun_over_c2_km
     root = ifelse(eta < 0.25, sqrt(1.0 - 4.0 * eta), 0.0)
     # find two masses both in km
     m1 = 0.5 * total_mass_km * (1.0 + root)
@@ -251,13 +256,13 @@ function _edgb_delta_phi_minus2(mc, eta, chi1, chi2, squared_alpha_EdGB_km4, GMs
     return (128.0 / 3.0) * beta_EdGB * eta^(-2.0 / 5.0) 
 end
 
-function _edgb_small_coupling_ratio(mc, eta, sqrt_alpha_EdGB_km, GMsun_over_c2=uc.GMsun_over_c2)
-    
-    GMsun_over_c2_km = GMsun_over_c2 / 1e3 # convert to km
-    total_mass_km = mc / eta^(3.0 / 5.0) * GMsun_over_c2_km
-    root = ifelse(eta < 0.25, sqrt(1.0 - 4.0 * eta), 0.0)
-    m1 = 0.5 * total_mass_km * (1.0 + root)
-    m2 = 0.5 * total_mass_km * (1.0 - root)
-
-    return sqrt_alpha_EdGB_km / min(m1, m2)
-end
+#function _edgb_small_coupling_ratio(mc, eta, sqrt_alpha_EdGB_km, GMsun_over_c2=uc.GMsun_over_c2)
+#    
+#    GMsun_over_c2_km = GMsun_over_c2 / 1e3 # convert to km
+#    total_mass_km = mc / eta^(3.0 / 5.0) * GMsun_over_c2_km
+#    root = ifelse(eta < 0.25, sqrt(1.0 - 4.0 * eta), 0.0)
+#    m1 = 0.5 * total_mass_km * (1.0 + root)
+#    m2 = 0.5 * total_mass_km * (1.0 - root)
+#
+#    return sqrt_alpha_EdGB_km / min(m1, m2)
+#end

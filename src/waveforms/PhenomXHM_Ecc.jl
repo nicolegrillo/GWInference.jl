@@ -142,5 +142,5 @@ function _ecc_amp_mod(e0, f, f0)
 
     "Leading-order-in-e0^2 amplitude modulation of the dominant harmonic."
 
-    return 1.0 .- (157.0 / 48.0) .* e0^2 .* (f ./ f0) .^ (-19.0 / 9.0)
+    return 1.0 .- (277.0 / 48.0) .* e0^2 .* (f ./ f0) .^ (-19.0 / 9.0)
 end

@@ -365,7 +365,7 @@ function Phase_22_ConnectionCoefficients(mc,
     
     # TaylorF2 PN Coefficients -----> inspiral phase expansion
     # -1PN BGR correction, see Eq. (4.0) of arXiv:1905.00870v3
-    phiminus2 = - deltaVminus2 * (pi^(-2.0 / 3.0))
+    phiminus2 = deltaVminus2 * (pi^(-2.0 / 3.0))
     # Newtonian
     phi0   = 1.
     # .5 PN
@@ -403,7 +403,7 @@ function Phase_22_ConnectionCoefficients(mc,
     end
 
     # Normalized Phase Derivatives
-    dphiminus2 = - (7.0 / 5.0) * deltaVminus2 * pi^(-2.0 / 3.0)
+    dphiminus2 = (7.0 / 5.0) * deltaVminus2 * pi^(-2.0 / 3.0)
     dphi0  = 1.0
     dphi1  = 0.0
     dphi2  = (743. /252. + (11. *eta)/3. )*(pi^(2. /3.)) * (1.0 + deltaVplus2)
