@@ -19,32 +19,33 @@ using Test
     tcoal = 0.3
     phiCoal = 0.5
 
+    # reference values below computed with the Jan 2026 10 km ET curves (ETS), on Julia 1.10
     CE_1= CE1Id
     CE_2 = CE2NM
     ET = ETS
     network = [CE_1, CE_2, ET];
     snrD_network = SNR(PhenomD(), network, mc, eta, chi1, chi2, dL, theta, phi, iota, psi, tcoal) 
-    @test isapprox(snrD_network, 37.695233406672514, rtol = 1e-12 )             
+    @test isapprox(snrD_network, 39.156938855608196, rtol = 1e-12 )             
 
     snrHM_network = SNR(PhenomHM(), network, mc, eta, chi1, chi2, dL, theta, phi, iota, psi, tcoal)
-    @test isapprox(snrHM_network, 37.92175372990184, rtol = 1e-12 )
+    @test isapprox(snrHM_network, 39.3804482334247, rtol = 1e-12 )
 
     fisherD_network = FisherMatrix(
     PhenomD(), network, mc, eta, chi1, chi2, dL, theta, phi, iota, psi, tcoal, phiCoal, coordinate_shift=false)
     cov = CovMatrix(fisherD_network)
     errors = Errors(cov)
 
-    errors_tabulated= [ 0.0039419796598880825
-    0.03516266365602064
-    0.6360722185017154
-    1.644468273826038
-    0.8085036923461478
-    0.0335937819637836
-    0.009880588299760065
-    0.07298579934712374
-    0.08559078006124807
-    0.00800474002070679
-    1.99701454428359]
+    errors_tabulated= [ 0.003863803861676538
+    0.0352320058894503
+    0.6380118491347128
+    1.6488131983913583
+    0.7599165204162439
+    0.031222495948098748
+    0.009927687954261081
+    0.06814555417938505
+    0.08105308080024505
+    0.008026468912306394
+    1.758869875790778]
 
     @test isapprox(errors, errors_tabulated, rtol = 1e-8)
 
@@ -54,17 +55,17 @@ using Test
     covHM = CovMatrix(fisherHM_network)
     errorsHM = Errors(covHM)
 
-    errors_tabulatedHM= [0.0013747374660239894
-    0.014491816156939124
-    0.28068667314616297
-    0.7462978126898637
-    0.7877776105708272
-    0.0321076596579239
-    0.009268865711735137
-    0.07105591071390889
-    0.08636127302050348
-    0.0036638964937824718
-    0.4224977988686636]
+    errors_tabulatedHM= [0.001358919968470554
+    0.014311145689930372
+    0.27704103196699753
+    0.7363589820753051
+    0.7431691635712657
+    0.030007509839817426
+    0.009287802246134305
+    0.06664432087699251
+    0.08177991690258951
+    0.0036155116993000025
+    0.40857162217027904]
 
     @test isapprox(errorsHM, errors_tabulatedHM, rtol = 1e-8)
 end
@@ -106,7 +107,7 @@ include("test_phenomxphm.jl")
     @test isapprox(abs.(hp0), 0.5 .* (1 .+ cos(iota)^2) .* ampXAS, rtol = 1e-3)
 
     snrXE_network = SNR(PhenomXE(), network, mc, eta, chi1, chi2, dL, theta, phi, iota, psi, tcoal, ecc, meanAno)
-    @test isapprox(snrXE_network, 37.574351252981, rtol = 1e-3)
+    @test isapprox(snrXE_network, 39.0370542106737, rtol = 1e-3)
 
     fisherXE_network = FisherMatrix(
         PhenomXE(), network, mc, eta, chi1, chi2, dL, theta, phi, iota, psi, tcoal, phiCoal, ecc, meanAno, coordinate_shift=false)
@@ -114,19 +115,19 @@ include("test_phenomxphm.jl")
     @test all(isfinite, fisherXE_network)
     errorsXE = Errors(CovMatrix(fisherXE_network))
 
-    errors_tabulatedXE = [0.0013330044268134254
-    0.0018860454311576797
-    0.0917927950405101
-    0.31881181456740976
-    0.9092385615164901
-    0.03447770082595458
-    0.009399000345739641
-    0.08164627135721421
-    0.08437607203758284
-    0.00016348878329178047
-    7.497095635131257
-    0.0004495179316747921
-    2.8420654696997247]
+    errors_tabulatedXE = [0.0012796717246793979
+    0.0018435709895120481
+    0.08938538597397967
+    0.31084094216970887
+    0.8498699573206085
+    0.03204263991447796
+    0.009452124375376394
+    0.07617285762382942
+    0.0799775690624142
+    0.00016269317307005806
+    7.445299457352858
+    0.00045052378284311096
+    2.7952757253895717]
 
     @test isapprox(errorsXE, errors_tabulatedXE, rtol = 1e-1)
 end
